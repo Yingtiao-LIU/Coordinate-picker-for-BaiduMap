@@ -1,0 +1,65 @@
+#项目使用场景：使用百度地图坐标拾取器拾取中国境外特定地点的经纬度
+#（1）数据准备：一个txt，里面包含了你希望抓取的所有地理的中文名称
+#（2）驱动准备：安装浏览器驱动（chromedriver.exe）
+#（3）模块准备：安装好selenium，pyperclip两个模块
+#说明：本项目为作者早期项目，不再进行维护和更新，请自行debug
+
+
+#引入两个module，都需要提前安装
+from selenium import webdriver
+import pyperclip,time
+#from selenium.webdriver.common.action_chains import ActionChains #看情况使用，若报错，可尝试使用ActionChains模块
+
+
+#需要打开对应的浏览器就需要对应浏览器的驱动，也需要提前安装
+#调动驱动，打开浏览器
+fc = webdriver.Chrome()#另外一个常用命名是‘browser’，这里fc意为 from Chrome
+fc.get('https://api.map.baidu.com/lbsapi/getpoint/index.html')
+fc.implicitly_wait(10)#隐式等待时间，意味“最多等待10s，若大于10s则执行下一步”
+
+#数据读取和输出的准备工作
+
+keywords = open('keywords.txt',encoding = 'utf8').read().splitlines()
+output = open('keywords_xy_GCJ02.txt','wb')
+title = 'keywords\tX_GCJ02\tY_GCJ02\n'
+output.write(title.encode('utf8'))
+
+
+#正式进入搜索工作,以下参数通过控制台查找
+t = fc.find_element(by='id',value='localvalue')#定位搜索文本框
+b1 = fc.find_element(by= 'xpath',value='/html/body/div[1]/div[1]/div[2]/input[2]')#定位搜索按钮
+b2 = fc.find_elements_by_xpath('/html/body/div[1]/div[3]/div[2]/div/ul/li[1]/div')
+#b2 = fc.find_element(by='xpath',value='/html/body/div[1]/div[3]/div[2]/div/ul/li[1]/span')#定位第一个搜索结果
+b3 = fc.find_element(by='xpath',value= '/html/body/div[1]/div[1]/div[3]/div[2]/input[2]')#定位复制结果按钮
+ 
+#先将定位移出中国
+t.send_keys('旧金山')
+b1.click()
+time.sleep(2)
+
+
+#通过循环批量获得经纬度
+p = 0
+total = len(keywords)
+for k in keywords:
+    t.clear()#清空之前的文本
+    time.sleep(0.5)
+    t.send_keys(k)#输入搜索内容
+    time.sleep(1)
+    b1.click()#点击搜索按钮
+    time.sleep(5)
+    #ActionChains(button).move_to_element(element).click().perform()
+    fc.execute_script("arguments[0].click();",b2)
+    #b2.click()#点击第一个搜索结果按钮
+    time.sleep(3)
+    b3.click()#点击复制结果按钮
+    #以下为结果输出的一些设置
+    x,y=pyperclip.paste().split(',')
+    out = '{0}\t{1}\t{2}\n'.format(k,x,y)
+    output.write(out.encode('utf8'))
+    time.sleep(0.5)
+    p+=1
+    print('{0}/{1}'.format(p,total))
+
+#output.close()
+#fc.quit()
